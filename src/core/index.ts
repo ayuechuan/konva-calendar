@@ -116,6 +116,7 @@ export class CanvasKonvaCalendar {
     this.cellWidth = (width - 40) / 7;
     this.cellHeight = (height - 60 - 30) / 5;
     this.registerEvents();
+    this.drawHoverGroup();
     this.drawCalendar(this.month, this.year);
   }
 
@@ -315,7 +316,6 @@ export class CanvasKonvaCalendar {
 
   setData(ranges: Range | Range[]): this {
     this.taskRanges = ranges instanceof Array ? ranges : [...this.taskRanges, ranges];
-    this.drawHoverGroup();
     this.drawTaskProgress();
     return this;
   }

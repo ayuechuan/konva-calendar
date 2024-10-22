@@ -53,8 +53,14 @@ const getPath = (_path) => path.resolve(__dirname, _path);
 export default {
   input: getPath("src/index.ts"),
   plugins: [
-    resolve(),
-    commonjs(),
+    resolve({
+      browser: true,  // 确保浏览器环境下加载 browser 字段指定的模块
+    }),
+    commonjs({
+      namedExports:{
+        "node_modules/konva/konva.js": ['canvas'],
+      }
+    }),
     terser(),
     typescript({
       tsconfig: getPath("./tsconfig.json"),
@@ -68,7 +74,8 @@ export default {
       declarationDir: "dist/types/",
     }),
   ],
-  external: ['canvas'], // 将未解析的依赖标记为外部依赖
+  // external: ['canvas'], // 将未解析的依赖标记为外部依赖
+  external: ['canvas'],  // 将 canvas 模块排除在外
   output: [
     {
       file: "dist/index.esm.js", // 输出 ESM 模块
