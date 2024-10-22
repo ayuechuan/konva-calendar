@@ -80,7 +80,7 @@ export default {
     {
       file: "dist/index.esm.js", // 输出 ESM 模块
       format: "esm",
-      sourcemap: true, // 生成 sourcemap 方便调试
+      sourcemap: false, // 生成 sourcemap 方便调试
     },
   ],
 };
