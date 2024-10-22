@@ -1,0 +1,22 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "sourceMap": true,
+    "declaration": true,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "module": "es2020",
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "target": "es2015",
+    // "outDir": "./dist",
+    "declarationDir": "dist/types", // 将类型声明文件输出到 types 文件夹
+    "lib": [
+      "es2020",
+      "dom"
+    ],
+  },
+  "include": ["./src"],
+  "exclude": ["node_modules", "dist"]
+}
