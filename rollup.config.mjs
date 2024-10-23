@@ -35,10 +35,10 @@ export default {
       declaration: true,
       declarationDir: "dist/types/",
     }),
-    visualizer({
-      filename: "stats.html",
-      open: true,
-    }),
+    // visualizer({
+    //   filename: "stats.html",
+    //   open: true,
+    // }),
   ],
   // external: ['canvas'], // 将未解析的依赖标记为外部依赖
   external: ["canvas" , "lunar-typescript"], // 将 canvas 模块排除在外
