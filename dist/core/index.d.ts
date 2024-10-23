@@ -1,4 +1,4 @@
-import Konva from "konva";
+import { Stage } from "konva/lib/Stage";
 import { EventType, KonvaCalendarConfig, Range } from "../model/index";
 /**
  * @example
@@ -57,10 +57,11 @@ export declare class CanvasKonvaCalendar {
     private clickCurrentInfo;
     private element;
     constructor(config: KonvaCalendarConfig);
+    private initDate;
     private get box();
     private setContainer;
     private get container();
-    downImage(config?: Parameters<Konva.Stage['toImage']>[number]): void;
+    downImage(config?: Parameters<Stage['toImage']>[number]): void;
     private registerEvents;
     private contextMenu;
     private get stageRect();
@@ -72,6 +73,7 @@ export declare class CanvasKonvaCalendar {
     on(key: EventType, callback: any): this;
     destory(): void;
     private addDays;
+    private addMonth;
     private draw;
     nextMonth(): void;
     today(): void;

@@ -1,11 +1,18 @@
-import Konva from "konva";
 import { Vector2d } from "konva/lib/types";
 import { haveIntersection } from "../utils/coordinate";
-import { Lunar } from "lunar-typescript";
-import { KonvaEventObject } from "konva/lib/Node";
+// import  { Lunar } from "lunar-typescript/dist/lib/Lunar";
 import { Stage } from "konva/lib/Stage";
-import { DragRect, EventType, KonvaCalendarConfig ,Range } from "../model/index";
+import { DragRect, EventType, KonvaCalendarConfig, Range } from "../model/index";
 import { generateUUID as uuid } from '../utils/uuid'
+import { Layer } from "konva/lib/Layer";
+import { Group } from "konva/lib/Group";
+import { Circle } from "konva/lib/shapes/Circle";
+import { Line } from "konva/lib/shapes/Line";
+import { Rect } from "konva/lib/shapes/Rect";
+import { Text } from 'konva/lib/shapes/Text';
+import { KonvaEventObject } from "konva/lib/Node";
+import { SolarDay } from 'tyme4ts';
+
 
 /**
  * @example
@@ -44,13 +51,13 @@ import { generateUUID as uuid } from '../utils/uuid'
 export class CanvasKonvaCalendar {
   static readonly daysOfWeek = ['周一', '周二', '周三', '周四', '周五', '周六', '周天'];
   //  渲染日历 layer ( 节点稳定 性能损失较小 )
-  private readonly layer: Konva.Layer;
+  private readonly layer: Layer;
   //  用户交互 layer ( 节点变更频繁 )
-  private readonly featureLayer: Konva.Layer;
+  private readonly featureLayer: Layer;
   //  画布
-  private readonly stage: Konva.Stage;
+  private readonly stage: Stage;
   //  horve group 实例
-  private hoverGroup!: Konva.Group;
+  private hoverGroup!: Group;
   private readonly cellWidth: number;
   private readonly cellHeight: number;
   //  x轴绘制起点
@@ -84,7 +91,7 @@ export class CanvasKonvaCalendar {
     startY: 0
   }
   //  拖动 任务group实例
-  private dragGroup: Konva.Group | null = null;
+  private dragGroup: Group | null = null;
   private readonly stageHeight: number;
   private clickCurrentInfo: { x: number, y: number, id: string } = { x: 0, y: 0, id: '' };
   private element!: Element;
@@ -93,33 +100,40 @@ export class CanvasKonvaCalendar {
     private readonly config: KonvaCalendarConfig,
   ) {
     this.setContainer(config.container);
-    this.stage = new Konva.Stage({
-      width: Math.max(config.width || 0 , 780),
-      height: Math.max(config.height || 0 , 730),
+    this.stage = new Stage({
+      width: Math.max(config.width || 0, 780),
+      height: Math.max(config.height || 0, 730),
       x: 0,
       y: 0,
       container: config.container
     });
-    this.layer = new Konva.Layer({ name: 'static-layer' });
-    this.featureLayer = new Konva.Layer({ name: 'dynamic-layer' });
+    this.layer = new Layer({ name: 'static-layer' });
+    this.featureLayer = new Layer({ name: 'dynamic-layer' });
     this.stage.add(this.layer);
     this.stage.add(this.featureLayer);
-
-    this.date = new Date(this.config.initDate || new Date());
-    this.stringDate = CanvasKonvaCalendar.formatDate(this.date);
-    this.month = this.date.getMonth();
-    this.year = this.date.getFullYear();
 
     (this.stage.container().children[0] as HTMLDivElement).style.background = '#FFF';
     const { width, height } = this.stageRect;
     this.stageHeight = height;
     this.cellWidth = (width - 40) / 7;
     this.cellHeight = (height - 60 - 30) / 5;
+
+    this.initDate();
     this.registerEvents();
     this.drawHoverGroup();
     this.drawCalendar(this.month, this.year);
   }
 
+  private initDate(date?: Date): void {
+    this.date = new Date(date || this.config.initDate || new Date());
+    this.stringDate = CanvasKonvaCalendar.formatDate(this.date);
+    this.month = this.date.getMonth() + 1;
+    this.year = this.date.getFullYear();
+    if (this.month > 12) {
+      this.month = 1;
+      this.year = this.year + 1;
+    }
+  }
 
   private get box(): DOMRect {
     return this.element.getBoundingClientRect();
@@ -130,7 +144,7 @@ export class CanvasKonvaCalendar {
       const className = container.slice(1);
       this.element = document.getElementsByClassName(className)[0];
     } else {
-      let id;
+      let id: string;
       if (container.charAt(0) !== '#') {
         id = container;
       } else {
@@ -144,7 +158,7 @@ export class CanvasKonvaCalendar {
     return this.stage.container();
   }
 
-  downImage(config?: Parameters<Konva.Stage['toImage']>[number]): void {
+  downImage(config?: Parameters<Stage['toImage']>[number]): void {
     this.stage.toImage({
       pixelRatio: 2,
       callback: (image) => {
@@ -338,6 +352,29 @@ export class CanvasKonvaCalendar {
     // 返回格式化后的新日期字符串
     return newDate.toISOString().split('T')[0]; // 格式为 YYYY-MM-DD
   }
+  //  追加月份
+  private addMonth(lastMonthYear: number, lastMonth: number, num: number) {
+    // 计算新的月份和年份
+    let newMonth = lastMonth + num;
+    let newYear = lastMonthYear;
+    // 处理月份超出 12 的情况，进行年份进位或退位
+    while (newMonth > 12) {
+      newYear++;
+      newMonth -= 12;
+    }
+    while (newMonth < 1) {
+      newYear--;
+      newMonth += 12;
+    }
+    // 格式化月份为两位数
+    const monthString = newMonth < 10 ? `0${newMonth}` : `${newMonth}`;
+    // 返回格式化的年月字符串
+    return {
+      stringDate: `${newYear}-${monthString}`,
+      nonePadMonth: newMonth,
+      month: monthString
+    };
+  }
 
   // 初始绘制
   private draw(): this {
@@ -350,8 +387,8 @@ export class CanvasKonvaCalendar {
   // 下一个月
   nextMonth(): void {
     this.month++;
-    if (this.month > 11) {
-      this.month = 0;
+    if (this.month > 12) {
+      this.month = 1;
       this.year++;
     }
     this.featureLayer.removeChildren();
@@ -359,29 +396,29 @@ export class CanvasKonvaCalendar {
   }
   //  今天
   today(): void {
-    this.month = new Date().getMonth();
-    this.year = new Date().getFullYear();
-    this.featureLayer.removeChildren();
+    this.initDate(new Date())
     this.draw();
   }
   //  上一个月
   prevMonth(): void {
     this.month--;
-    if (this.month < 0) {
-      this.month = 11;
+    if (this.month < 1) {
+      this.month = 12;
       this.year--;
     }
     this.featureLayer.removeChildren();
     this.draw()
   }
+
+
   //  通过鼠标坐标 查找某个图层的元素
   private findGroup(
-    layer: Konva.Layer,
+    layer: Layer,
     findkey: string,
     pointerParam?: Vector2d | null
   ) {
     const pointer = pointerParam || this.stage.getPointerPosition()!;
-    const taskGroups = layer.find(findkey) as Konva.Group[];
+    const taskGroups = layer.find(findkey) as Group[];
     if (!taskGroups.length) {
       return;
     }
@@ -393,24 +430,28 @@ export class CanvasKonvaCalendar {
       }
     }
   }
+
   // 获取该月的第一天和最后一天
   private getDaysInMonth(month: number, year: number) {
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    // 注意：JavaScript 中的月份是从 0 开始的，因此需要 -1
+    const firstDay = new Date(year, month - 1, 1); // 月份从 0 开始
+    const lastDay = new Date(year, month, 0);      // 传递下个月的第 0 天，表示本月的最后一天
+
     return {
-      firstDay,
-      lastDay,
-      daysInMonth: lastDay.getDate(),
+      firstDay,                   // 本月的第一天
+      lastDay,                    // 本月的最后一天
+      daysInMonth: lastDay.getDate(),  // 获取当月的总天数
     };
   }
+
   // 绘制日历
   private drawCalendar(month: number, year: number): void {
     // 清空图层
     this.layer.removeChildren();
     const { firstDay, daysInMonth } = this.getDaysInMonth(month, year);
     //  绘制当前显示的年份
-    const headerGroup = new Konva.Group({ name: 'header' })
-    const yearRect = new Konva.Rect({
+    const headerGroup = new Group({ name: 'header' })
+    const yearRect = new Rect({
       x: 0,
       y: 0,
       width: this.stage.width(),
@@ -418,24 +459,22 @@ export class CanvasKonvaCalendar {
       fill: 'white',
       strokeWidth: 1,
     });
-
-    const yearText = new Konva.Text({
+    const yearText = new Text({
       x: 0,
       y: 10,
-      text: `${year}年${month + 1}月`,
+      text: `${year}年${month}月`,
       fontSize: 20,
       fontFamily: 'Calibri',
       fontStyle: 'bold',
       width: 120,
       align: 'center',
     })
-
     headerGroup.add(yearRect, yearText);
     this.layer.add(headerGroup);
 
     // 绘制每个星期的标题
     CanvasKonvaCalendar.daysOfWeek.forEach((day, index) => {
-      const backgroudRect = new Konva.Rect({
+      const backgroudRect = new Rect({
         x: index * this.cellWidth + this.startX,
         y: 40,
         width: this.cellWidth,
@@ -444,7 +483,7 @@ export class CanvasKonvaCalendar {
         strokeWidth: 1,
       })
 
-      const text = new Konva.Text({
+      const text = new Text({
         x: index * this.cellWidth + this.startX,
         y: 50,
         text: day,
@@ -458,19 +497,19 @@ export class CanvasKonvaCalendar {
     });
     // 计算偏移量
     const startOffset = (firstDay.getDay() + 6) % 7; // 计算偏移，周一为0
-
     const lastMonth = month === 0 ? 11 : month - 1;
     const lastMonthYear = month === 0 ? year - 1 : year;
     const { daysInMonth: lastDaysInMonth } = this.getDaysInMonth(lastMonth, lastMonthYear);
+
     // 渲染上一个月的日期
     for (let i = 0; i < startOffset; i++) {
       const day = lastDaysInMonth - startOffset + 1 + i; // 计算上一个月的日期
       const x = i * this.cellWidth + this.startX;
-      const id = `${year}-${month}-${(day)}`.replace(/-(\d)-/g, '-0\$1-').replace(/-(\d)$/g, '-0\$1');
+      const { stringDate } = this.addMonth(lastMonthYear, lastMonth, 0);
+      const id = stringDate + `-${day < 10 ? '0' + day : day}`;
       const { dayInChinese, monthInChinese } = CanvasKonvaCalendar.getChineseCalendar(new Date(id));
-
-      const group = new Konva.Group({ name: 'dateCell', id: id, x: x, y: 70 });
-      const rect = new Konva.Rect({
+      const group = new Group({ name: 'dateCell', id: id, x: x, y: 70 });
+      const rect = new Rect({
         x: 0,
         y: 0,
         width: this.cellWidth,
@@ -479,7 +518,7 @@ export class CanvasKonvaCalendar {
         stroke: '#E1E2E3',
         strokeWidth: 1,
       });
-      const text = new Konva.Text({
+      const text = new Text({
         x: 10,
         y: 10,
         text: day.toString(),
@@ -488,10 +527,10 @@ export class CanvasKonvaCalendar {
         fill: 'gray', // 用灰色标记上个月的日期
       });
 
-      const chineseText = new Konva.Text({
+      const chineseText = new Text({
         x: this.cellWidth - 40,
         y: 13,
-        text: dayInChinese === '初一' ? `${monthInChinese}月` : dayInChinese,
+        text: dayInChinese === '初一' ? `${monthInChinese}` : dayInChinese,
         fontSize: 13,
         fontFamily: 'Calibri',
         fill: 'rgba(0,0,0,0.4)',
@@ -505,12 +544,15 @@ export class CanvasKonvaCalendar {
     for (let i = 0; i < daysInMonth; i++) {
       const x = (i + startOffset) % 7 * this.cellWidth + this.startX;
       const y = Math.floor((i + startOffset) / 7) * this.cellHeight + 40 + 30; // + cellHeight 为下移一行
-      const id = `${year}-${month + 1}-${(i + 1)}`.replace(/-(\d)-/g, '-0\$1-').replace(/-(\d)$/g, '-0\$1');
-      const group = new Konva.Group({ name: 'dateCell', id, x, y });
-      const { dayInChinese, monthInChinese } = CanvasKonvaCalendar.getChineseCalendar(new Date(id));
+      const padDay = i + 1 < 10 ? '0' + (i + 1) : i + 1;
+      const { stringDate, nonePadMonth } = this.addMonth(lastMonthYear, lastMonth, 1);
+      const id = stringDate + `-${padDay}`;
+      const group = new Group({ name: 'dateCell', id, x, y });
 
+      const { dayInChinese, monthInChinese } = CanvasKonvaCalendar.getChineseCalendar(new Date(id));
+      console.log('10000', id, monthInChinese, dayInChinese);
       const activeDate = this.stringDate === id;
-      const rect = new Konva.Rect({
+      const rect = new Rect({
         x: 0,
         y: 0,
         width: this.cellWidth,
@@ -526,13 +568,13 @@ export class CanvasKonvaCalendar {
       let fontSize = 20;
       let textContext = (i + 1).toString();
       if (textContext === '1') {
-        textContext = month + 1 + '月' + (i + 1) + '日';
+        textContext = nonePadMonth.toString() + '月' + textContext + '日';
         fontSize = 15;
         CircleRadius = 15
       }
 
       //  命中当前日期
-      const circle = new Konva.Circle({
+      const circle = new Circle({
         x: Circlex,
         y: Circley,
         radius: CircleRadius,
@@ -541,7 +583,7 @@ export class CanvasKonvaCalendar {
         strokeWidth: 1,
       });
 
-      const text = new Konva.Text({
+      const text = new Text({
         x: textContext?.length > 1 ? 10 : 15,
         y: textContext?.length > 1 ? 12 : 10,
         text: textContext,
@@ -552,10 +594,10 @@ export class CanvasKonvaCalendar {
         fontStyle: 'bold',
       });
 
-      const chineseText = new Konva.Text({
+      const chineseText = new Text({
         x: this.cellWidth - 40,
         y: 13,
-        text: dayInChinese === '初一' ? `${monthInChinese}月` : dayInChinese,
+        text: dayInChinese === '初一' ? `${monthInChinese}` : dayInChinese,
         fontSize: 13,
         fontFamily: 'Calibri',
         fill: 'rgba(0,0,0,0.4)',
@@ -574,11 +616,12 @@ export class CanvasKonvaCalendar {
       const day = i + 1; // 下个月的日期
       const x = (daysInMonth + startOffset + i) % 7 * this.cellWidth + this.startX;
       const y = Math.floor((daysInMonth + startOffset) / 7) * this.cellHeight + 40 + 30;
-      const id = `${year}-${month + 2}-${(day).toString().padStart(2, '0')}`;
-      const group = new Konva.Group({ name: 'dateCell', id, x, y });
+      const { stringDate } = this.addMonth(lastMonthYear, lastMonth, 2);
+      const id = stringDate + `-${i + 1 < 10 ? '0' + (i + 1) : i + 1}`;
+      const group = new Group({ name: 'dateCell', id, x, y });
       const { dayInChinese, monthInChinese } = CanvasKonvaCalendar.getChineseCalendar(new Date(id));
 
-      const rect = new Konva.Rect({
+      const rect = new Rect({
         x: 0,
         y: 0,
         width: this.cellWidth,
@@ -587,7 +630,7 @@ export class CanvasKonvaCalendar {
         stroke: '#E1E2E3',
         strokeWidth: 1,
       });
-      const text = new Konva.Text({
+      const text = new Text({
         x: 10,
         y: 10,
         text: day.toString(),
@@ -597,10 +640,10 @@ export class CanvasKonvaCalendar {
         fill: 'gray',
         align: 'center',
       });
-      const chineseText = new Konva.Text({
+      const chineseText = new Text({
         x: this.cellWidth - 40,
         y: 13,
-        text: dayInChinese === '初一' ? `${monthInChinese}月` : dayInChinese,
+        text: dayInChinese === '初一' ? `${monthInChinese}` : dayInChinese,
         fontSize: 13,
         fontFamily: 'Calibri',
         fill: 'rgba(0,0,0,0.4)',
@@ -701,7 +744,7 @@ export class CanvasKonvaCalendar {
         rectWidth = rectWidth - 10;
       }
       // 绘制任务
-      const rect = new Konva.Rect({
+      const rect = new Rect({
         y: groupRect.y + yOffset,
         x: rectX,
         width: rectWidth,
@@ -711,7 +754,7 @@ export class CanvasKonvaCalendar {
         cornerRadius: [3, 3, 3, 3]
       });
 
-      const text = new Konva.Text({
+      const text = new Text({
         x: groupRect.x + (range.startSign ? 15 : 5),
         y: groupRect.y + yOffset + 5,
         text: range.description || '未命名记录',
@@ -720,7 +763,7 @@ export class CanvasKonvaCalendar {
       });
 
       // 创建 Konva 组并添加任务矩形和文本
-      const taskProgressGroup = new Konva.Group({
+      const taskProgressGroup = new Group({
         name: `task-progress-group ${range.parentId}`,
         id: range.id,
         parentId: range.parentId,
@@ -740,10 +783,10 @@ export class CanvasKonvaCalendar {
     while (true) {
       const { value, done } = values.next();
       if (done) break;
-      const group = this.layer.find(`#${value[0].startTime}`) as Konva.Group[];
+      const group = this.layer.find(`#${value[0].startTime}`) as Group[];
       if (group.length) {
         const groupRect = group[0].getClientRect();
-        const text = new Konva.Text({
+        const text = new Text({
           x: 0,
           y: 5,
           text: `还有${value.length}项`,
@@ -751,7 +794,7 @@ export class CanvasKonvaCalendar {
           fill: 'rgba(0,0,0,0.4)',
         })
 
-        const rect = new Konva.Rect({
+        const rect = new Rect({
           x: -5,
           y: 0,
           height: 18,
@@ -760,7 +803,7 @@ export class CanvasKonvaCalendar {
           cornerRadius: [3, 3, 3, 3]
         })
 
-        const surpassGroup = new Konva.Group({
+        const surpassGroup = new Group({
           name: "surpass-group",
           id: value[0].startTime,
           x: groupRect.x + 10,
@@ -805,7 +848,7 @@ export class CanvasKonvaCalendar {
 
   // 移除所有任务
   private removeTasks(): void {
-    const tasks = this.featureLayer.find(".task-progress-group,.surpass-group") as Konva.Group[];
+    const tasks = this.featureLayer.find(".task-progress-group,.surpass-group") as Group[];
     if (!tasks.length) {
       return;
     }
@@ -889,7 +932,7 @@ export class CanvasKonvaCalendar {
 
   //  绘制鼠标悬浮的矩形
   private drawHoverGroup(): void {
-    const group = new Konva.Group({
+    const group = new Group({
       visible: false,
       width: this.cellWidth,
       height: this.cellHeight,
@@ -899,7 +942,7 @@ export class CanvasKonvaCalendar {
       opacity: 0.6
     })
 
-    const rect = new Konva.Rect({
+    const rect = new Rect({
       x: 0,
       y: 0,
       width: this.cellWidth,
@@ -938,13 +981,13 @@ export class CanvasKonvaCalendar {
 
   //  绘制加号
   private drawPlusSign() {
-    const plusSignGroup = new Konva.Group({
+    const plusSignGroup = new Group({
       id: 'plusSignGroup',
       x: this.hoverGroup.x() + this.cellWidth - 30,
       y: this.hoverGroup.y() + 5,
     });
 
-    const plusSignRect = new Konva.Rect({
+    const plusSignRect = new Rect({
       x: 10,
       y: -5,
       width: 20,
@@ -953,7 +996,7 @@ export class CanvasKonvaCalendar {
     });
 
     // 绘制十字架的两条线
-    const verticalLine = new Konva.Line({
+    const verticalLine = new Line({
       points: [
         20,
         0,
@@ -964,7 +1007,7 @@ export class CanvasKonvaCalendar {
       strokeWidth: 2
     });
 
-    const horizontalLine = new Konva.Line({
+    const horizontalLine = new Line({
       points: [
         15,
         5,
@@ -990,13 +1033,12 @@ export class CanvasKonvaCalendar {
   }
 
   private static getChineseCalendar(date: Date) {
-    const lunar = Lunar.fromDate(date);
-    const dayInChinese = lunar.getDayInChinese();
-    const monthInChinese = lunar.getMonthInChinese();
-
+    const solarDay = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    const splitDates = solarDay.getLunarDay().toString().match(/^(\S+年)(\S+月)(\S+)$/)!;
+    const resultArray = splitDates.slice(1);
     return {
-      dayInChinese,
-      monthInChinese,
+      dayInChinese: resultArray[2],
+      monthInChinese: resultArray[1],
     };
   };
 }

@@ -1,4 +1,4 @@
-import Konva from "konva";
+import { Group } from "konva/lib/Group";
 export type EventType = "ADDTASKRANGE" | "CLICKRANGE" | "UPDATETASK" | "CONTEXTMENU" | "CLICKSURPASSTIP";
 export interface KonvaCalendarConfig {
     mode: 'read' | 'edit';
@@ -22,5 +22,5 @@ export interface DragRect {
     sourceY: number;
     startX: number;
     startY: number;
-    targetGroup: null | Konva.Group;
+    targetGroup: null | Group;
 }

@@ -1,4 +1,4 @@
-import Konva from "konva";
+import { Group } from "konva/lib/Group";
 
 export type EventType =
   // 点击 加号 添加任务
@@ -41,5 +41,5 @@ export interface DragRect {
   sourceY: number;
   startX: number;
   startY: number;
-  targetGroup: null | Konva.Group;
+  targetGroup: null | Group;
 }
