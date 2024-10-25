@@ -46,7 +46,7 @@ export declare class CanvasKonvaCalendar {
     private readonly startX;
     private readonly emitter;
     private hoverRect;
-    taskRanges: any[];
+    taskRanges: Range[];
     private date;
     private stringDate;
     private month;
@@ -67,7 +67,10 @@ export declare class CanvasKonvaCalendar {
     private get stageRect();
     private mousedown;
     private mousemoveHoveHighlight;
+    globalMouseUpHandler: null | ((event: MouseEvent) => void);
     private dragMousemove;
+    private globalMouseup;
+    private clearDragDepend;
     private mouseup;
     setData(ranges: Range | Range[]): this;
     on(key: EventType, callback: any): this;

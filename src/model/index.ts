@@ -32,6 +32,7 @@ export interface Range {
   fill: string;
   description: string;
   id: string;
+  [x : string] : any
 }
 
 export interface DragRect {
@@ -42,4 +43,19 @@ export interface DragRect {
   startX: number;
   startY: number;
   targetGroup: null | Group;
+}
+
+
+export class RecordsDragGroupRect {
+  differenceX = 0;
+  differenceY = 0;
+  sourceX = 0;
+  sourceY = 0;
+  startX = 0;
+  startY = 0;
+  targetGroup: null | Group = null;
+
+  constructor(props?: Partial<RecordsDragGroupRect>) {
+    Object.assign(this, props);
+  }
 }

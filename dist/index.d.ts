@@ -1,4 +1,4 @@
 import { CanvasKonvaCalendar } from "./core";
-import { KonvaCalendarConfig } from "./model";
-export { CanvasKonvaCalendar, KonvaCalendarConfig };
+export type { KonvaCalendarConfig } from "./model";
+export { CanvasKonvaCalendar };
 export default CanvasKonvaCalendar;

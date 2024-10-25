@@ -14,6 +14,7 @@ export interface Range {
     fill: string;
     description: string;
     id: string;
+    [x: string]: any;
 }
 export interface DragRect {
     differenceX: number;
@@ -23,4 +24,14 @@ export interface DragRect {
     startX: number;
     startY: number;
     targetGroup: null | Group;
+}
+export declare class RecordsDragGroupRect {
+    differenceX: number;
+    differenceY: number;
+    sourceX: number;
+    sourceY: number;
+    startX: number;
+    startY: number;
+    targetGroup: null | Group;
+    constructor(props?: Partial<RecordsDragGroupRect>);
 }
