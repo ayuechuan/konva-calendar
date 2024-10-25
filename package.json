@@ -1,6 +1,6 @@
 {
   "name": "konva-calendar",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A calendar for managing the progress of tasks",
   "main": "dist/index.esm.js",
   "types": "dist/index.d.ts",
