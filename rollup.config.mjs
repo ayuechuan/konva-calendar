@@ -17,6 +17,7 @@ export default {
     commonjs({
       namedExports: {
         "node_modules/konva/konva.js": ["canvas"],
+        'konva': ['DD' , 'canvas'] // 强制保留 Konva.DD
       },
     }),
     terser({

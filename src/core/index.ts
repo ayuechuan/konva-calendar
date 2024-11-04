@@ -1,18 +1,12 @@
 import { Vector2d } from "konva/lib/types";
 import { haveIntersection } from "../utils/coordinate";
-// import  { Lunar } from "lunar-typescript/dist/lib/Lunar";
-import { Stage } from "konva/lib/Stage";
 import { DragRect, EventType, KonvaCalendarConfig, Range, RecordsDragGroupRect } from "../model/index";
 import { generateUUID as uuid } from '../utils/uuid'
-import { Layer } from "konva/lib/Layer";
-import { Group } from "konva/lib/Group";
-import { Circle } from "konva/lib/shapes/Circle";
-import { Line } from "konva/lib/shapes/Line";
-import { Rect } from "konva/lib/shapes/Rect";
-import { Text } from 'konva/lib/shapes/Text';
-import { KonvaEventObject } from "konva/lib/Node";
 import { SolarDay } from 'tyme4ts';
 import { CalendarEvent } from "../utils/emiter";
+import Konva from "konva";
+import { KonvaEventObject } from "konva/lib/Node";
+
 
 
 /**
@@ -52,13 +46,13 @@ import { CalendarEvent } from "../utils/emiter";
 export class CanvasKonvaCalendar {
   static readonly daysOfWeek = ['周一', '周二', '周三', '周四', '周五', '周六', '周天'];
   //  渲染日历 layer ( 节点稳定 性能损失较小 )
-  private readonly layer: Layer;
+  private readonly layer: Konva.Layer;
   //  用户交互 layer ( 节点变更频繁 )
-  private readonly featureLayer: Layer;
+  private readonly featureLayer: Konva.Layer;
   //  画布
-  private readonly stage: Stage;
+  private readonly stage: Konva.Stage;
   //  horve group 实例
-  private hoverGroup!: Group;
+  private hoverGroup!: Konva.Group;
   private readonly cellWidth: number;
   private readonly cellHeight: number;
   //  x轴绘制起点
@@ -92,7 +86,7 @@ export class CanvasKonvaCalendar {
     startY: 0
   }
   //  拖动 任务group实例
-  private dragGroup: Group | null = null;
+  private dragGroup: Konva.Group | null = null;
   private readonly stageHeight: number;
   private clickCurrentInfo: { x: number, y: number, id: string } = { x: 0, y: 0, id: '' };
   private element!: Element;
@@ -100,16 +94,17 @@ export class CanvasKonvaCalendar {
   constructor(
     private readonly config: KonvaCalendarConfig,
   ) {
+    console.log('_' , Konva.DD);
     this.setContainer(config.container);
-    this.stage = new Stage({
+    this.stage = new Konva.Stage({
       width: Math.max(config.width || 0, 780),
       height: Math.max(config.height || 0, 730),
       x: 0,
       y: 0,
       container: config.container
     });
-    this.layer = new Layer({ name: 'static-layer' });
-    this.featureLayer = new Layer({ name: 'dynamic-layer' });
+    this.layer = new Konva.Layer({ name: 'static-layer' });
+    this.featureLayer = new Konva.Layer({ name: 'dynamic-layer' });
     this.stage.add(this.layer);
     this.stage.add(this.featureLayer);
 
@@ -159,7 +154,7 @@ export class CanvasKonvaCalendar {
     return this.stage.container();
   }
 
-  downImage(config?: Parameters<Stage['toImage']>[number]): void {
+  downImage(config?: Parameters<Konva.Stage['toImage']>[number]): void {
     this.stage.toImage({
       pixelRatio: 2,
       callback: (image) => {
@@ -174,7 +169,7 @@ export class CanvasKonvaCalendar {
 
   //  注册事件
   private registerEvents(): void {
-    this.stage.on('click', (event: KonvaEventObject<MouseEvent, Stage>) => {
+    this.stage.on('click', (event: KonvaEventObject<MouseEvent, Konva.Stage>) => {
       if (event.evt.button === 2 || !this.clickCurrentInfo.id) return;
       this.emitter.emit('CLICKRANGE', this.clickCurrentInfo);
       this.clickCurrentInfo = { x: 0, y: 0, id: '' };
@@ -188,7 +183,7 @@ export class CanvasKonvaCalendar {
     this.stage.on('contextmenu', (event) => this.contextMenu(event));
   }
 
-  private contextMenu(event: KonvaEventObject<MouseEvent, Stage>): void {
+  private contextMenu(event: KonvaEventObject<MouseEvent, Konva.Stage>): void {
     event.cancelBubble = true;
     event.evt.preventDefault();
 
@@ -281,8 +276,10 @@ export class CanvasKonvaCalendar {
 
     const pointer = this.stage.getPointerPosition()!;
     this.dragGroup.setAttrs({
-      x: pointer.x - this.recordsDragGroupRect.differenceX - this.recordsDragGroupRect.sourceX,
-      y: pointer.y - this.recordsDragGroupRect.differenceY - this.recordsDragGroupRect.sourceY
+      // x: pointer.x - this.recordsDragGroupRect.differenceX - this.recordsDragGroupRect.sourceX,
+      // y: pointer.y - this.recordsDragGroupRect.differenceY - this.recordsDragGroupRect.sourceY
+      x: pointer.x - this.recordsDragGroupRect.differenceX,
+      y: pointer.y - this.recordsDragGroupRect.differenceY
     })
   }
 
@@ -344,7 +341,7 @@ export class CanvasKonvaCalendar {
   }
 
   private mouseup(): void {
-    if(this.dragGroup){
+    if (this.dragGroup) {
       return;
     }
     this.recordsDragGroupRect = {
@@ -444,12 +441,12 @@ export class CanvasKonvaCalendar {
 
   //  通过鼠标坐标 查找某个图层的元素
   private findGroup(
-    layer: Layer,
+    layer: Konva.Layer,
     findkey: string,
     pointerParam?: Vector2d | null
   ) {
     const pointer = pointerParam || this.stage.getPointerPosition()!;
-    const taskGroups = layer.find(findkey) as Group[];
+    const taskGroups = layer.find(findkey) as Konva.Group[];
     if (!taskGroups.length) {
       return;
     }
@@ -481,8 +478,8 @@ export class CanvasKonvaCalendar {
     this.layer.removeChildren();
     const { firstDay, daysInMonth } = this.getDaysInMonth(month, year);
     //  绘制当前显示的年份
-    const headerGroup = new Group({ name: 'header' })
-    const yearRect = new Rect({
+    const headerGroup = new Konva.Group({ name: 'header' })
+    const yearRect = new Konva.Rect({
       x: 0,
       y: 0,
       width: this.stage.width(),
@@ -490,7 +487,7 @@ export class CanvasKonvaCalendar {
       fill: 'white',
       strokeWidth: 1,
     });
-    const yearText = new Text({
+    const yearText = new Konva.Text({
       x: 0,
       y: 10,
       text: `${year}年${month}月`,
@@ -504,7 +501,7 @@ export class CanvasKonvaCalendar {
 
     // 绘制每个星期的标题
     CanvasKonvaCalendar.daysOfWeek.forEach((day, index) => {
-      const backgroudRect = new Rect({
+      const backgroudRect = new Konva.Rect({
         x: index * this.cellWidth + this.startX,
         y: 40,
         width: this.cellWidth,
@@ -513,7 +510,7 @@ export class CanvasKonvaCalendar {
         strokeWidth: 1,
       })
 
-      const text = new Text({
+      const text = new Konva.Text({
         x: index * this.cellWidth + this.startX,
         y: 50,
         text: day,
@@ -537,8 +534,8 @@ export class CanvasKonvaCalendar {
       const { stringDate } = this.addMonth(lastMonthYear, lastMonth, 0);
       const id = stringDate + `-${day < 10 ? '0' + day : day}`;
       const { dayInChinese, monthInChinese } = CanvasKonvaCalendar.getChineseCalendar(new Date(id));
-      const group = new Group({ name: 'dateCell', id: id, x: x, y: 70 });
-      const rect = new Rect({
+      const group = new Konva.Group({ name: 'dateCell', id: id, x: x, y: 70 });
+      const rect = new Konva.Rect({
         x: 0,
         y: 0,
         width: this.cellWidth,
@@ -547,7 +544,7 @@ export class CanvasKonvaCalendar {
         stroke: '#E1E2E3',
         strokeWidth: 1,
       });
-      const text = new Text({
+      const text = new Konva.Text({
         x: 10,
         y: 10,
         text: day.toString(),
@@ -555,7 +552,7 @@ export class CanvasKonvaCalendar {
         fill: 'gray', // 用灰色标记上个月的日期
       });
 
-      const chineseText = new Text({
+      const chineseText = new Konva.Text({
         x: this.cellWidth - 40,
         y: 13,
         text: dayInChinese === '初一' ? `${monthInChinese}` : dayInChinese,
@@ -574,16 +571,17 @@ export class CanvasKonvaCalendar {
       const padDay = i + 1 < 10 ? '0' + (i + 1) : i + 1;
       const { stringDate, nonePadMonth } = this.addMonth(lastMonthYear, lastMonth, 1);
       const id = stringDate + `-${padDay}`;
-      const group = new Group({ name: 'dateCell', id, x, y });
+      const group = new Konva.Group({ name: 'dateCell', id, x, y });
 
       const { dayInChinese, monthInChinese } = CanvasKonvaCalendar.getChineseCalendar(new Date(id));
       const activeDate = this.stringDate === id;
-      const rect = new Rect({
+      const rect = new Konva.Rect({
         x: 0,
         y: 0,
         width: this.cellWidth,
         height: this.cellHeight,
         fill: '#fff',
+        // fill : 'transparent',
         stroke: '#EEE',
         strokeWidth: 1,
       });
@@ -596,7 +594,7 @@ export class CanvasKonvaCalendar {
         fontSize = 13;
       }
       // 创建文本
-      const text = new Text({
+      const text = new Konva.Text({
         x: 15,  // 固定文本的 x 坐标
         y: 10,  // 固定文本的 y 坐标
         text: textContext,
@@ -618,7 +616,7 @@ export class CanvasKonvaCalendar {
       const Circley = text.y() + textHeight / 2;
 
       // 创建圆
-      const circle = new Circle({
+      const circle = new Konva.Circle({
         x: Circlex,
         y: Circley,
         radius: CircleRadius,
@@ -627,7 +625,7 @@ export class CanvasKonvaCalendar {
         strokeWidth: 1,
       });
 
-      const chineseText = new Text({
+      const chineseText = new Konva.Text({
         x: this.cellWidth - 40,
         y: 13,
         text: dayInChinese === '初一' ? `${monthInChinese}` : dayInChinese,
@@ -650,10 +648,10 @@ export class CanvasKonvaCalendar {
       const y = Math.floor((daysInMonth + startOffset) / 7) * this.cellHeight + 40 + 30;
       const { stringDate } = this.addMonth(lastMonthYear, lastMonth, 2);
       const id = stringDate + `-${i + 1 < 10 ? '0' + (i + 1) : i + 1}`;
-      const group = new Group({ name: 'dateCell', id, x, y });
+      const group = new Konva.Group({ name: 'dateCell', id, x, y });
       const { dayInChinese, monthInChinese } = CanvasKonvaCalendar.getChineseCalendar(new Date(id));
 
-      const rect = new Rect({
+      const rect = new Konva.Rect({
         x: 0,
         y: 0,
         width: this.cellWidth,
@@ -662,7 +660,7 @@ export class CanvasKonvaCalendar {
         stroke: '#E1E2E3',
         strokeWidth: 1,
       });
-      const text = new Text({
+      const text = new Konva.Text({
         x: 10,
         y: 10,
         text: day.toString(),
@@ -671,7 +669,7 @@ export class CanvasKonvaCalendar {
         fill: 'gray',
         align: 'center',
       });
-      const chineseText = new Text({
+      const chineseText = new Konva.Text({
         x: this.cellWidth - 40,
         y: 13,
         text: dayInChinese === '初一' ? `${monthInChinese}` : dayInChinese,
@@ -774,9 +772,9 @@ export class CanvasKonvaCalendar {
         rectWidth = rectWidth - 10;
       }
       // 绘制任务
-      const rect = new Rect({
-        y: groupRect.y + yOffset,
-        x: rectX,
+      const rect = new Konva.Rect({
+        y: 0,
+        x: 0,
         width: rectWidth,
         height: 20,
         fill: range.fill || '#f3d4d4',
@@ -784,25 +782,132 @@ export class CanvasKonvaCalendar {
         cornerRadius: [3, 3, 3, 3]
       });
 
-      const text = new Text({
-        x: groupRect.x + (range.startSign ? 15 : 5),
-        y: groupRect.y + yOffset + 5,
+      const text = new Konva.Text({
+        x: (range.startSign ? 15 : 5),
+        y: 5,
         text: range.description || '未命名记录',
         fontSize: 12,
         fill: 'rgba(0,0,0,0.8)'
       });
 
       // 创建 Konva 组并添加任务矩形和文本
-      const taskProgressGroup = new Group({
+      const taskProgressGroup = new Konva.Group({
         name: `task-progress-group ${range.parentId}`,
         id: range.id,
         parentId: range.parentId,
-        day: range.day
+        day: range.day,
+        startSign: range.startSign,
+        endSign: range.endSign,
+        y: groupRect.y + yOffset,
+        x: rectX,
       });
 
       taskProgressGroup.add(rect, text);
+
+      // const group222 = new Konva.Group({
+      //   x: taskProgressGroup.getClientRect().width - 10,
+      //   y: 0,
+      //   visible: true, // 初始隐藏handle
+      //   draggable: true,
+      //   name : '001',
+      //   dragBoundFunc: function (pos) {
+      //     return pos
+      //     // const newX = Math.max(pos.x, taskProgressGroup.x() + 10); // 保证handle不会拖得太小
+      //     // return { x: newX, y: this.absolutePosition().y };
+      //   },
+      // });
+
+      // // 拖动handle，用于调整任务条宽度
+      // const handle = new Konva.Rect({
+      //   x: 0,
+      //   y: 0,
+      //   width: 10,
+      //   height: 20,
+      //   fill: 'rgba(0,0,0,0.4)',
+      //   // fill: 'yellow',
+      //   cornerRadius: [0, 3, 3, 0]
+      // });
+
+      // // 监听拖动事件，动态更新矩形宽度
+      // group222.on('dragmove', (event) => {
+      //   // group222.setAttr('opacity', 0);
+      //   console.log('event',event , range.endTime,
+      //     range.startTime);
+
+      //   const newWidth = group222.x() + group222.getClientRect().width - 10;
+      //   taskProgressGroup.children[0].width(newWidth);
+      //   // task.duration = Math.floor(newWidth / timeUnitWidth);  // 更新任务的持续时间
+      // });
+
+      // const lineRect = new Konva.Rect({
+      //   x: 3,
+      //   y: 5,
+      //   width: 0.5,
+      //   height: 28,
+      //   fill: 'white',
+      //   cornerRadius: [0, 3, 3, 0]
+      // });
+      // const lineRect2 = new Konva.Rect({
+      //   x: 6,
+      //   y: 3,
+      //   width: 0.5,
+      //   height: 33,
+      //   fill: 'white',
+      //   cornerRadius: [0, 3, 3, 0]
+      // });
+
+      // // 当拖动结束时，使用就近原则将 handle 对齐到最近的时间线
+      // group222.on('dragend', () => {
+      //   group222.setAttr('opacity', 1);
+      //   return;
+      //   // // 获取 handle 的当前位置
+      //   // const handleX = group.x();
+      //   // // 计算最近的时间线
+      //   // const closestGridX = Math.round(handleX / timeUnitWidth) * timeUnitWidth;
+      //   // 获取 handle 的当前位置
+      //   const handleX = group.x();
+      //   // 计算最近的时间线，向上取整
+      //   const closestGridX = Math.ceil(handleX / timeUnitWidth) * timeUnitWidth;
+
+
+      //   // 更新 handle 位置并对齐
+      //   group.x(closestGridX);
+      //   // 根据 handle 位置更新任务条的宽度
+      //   // const newWidth = handle.x() - rect.x();
+      //   const newWidth = closestGridX - rect.x();
+      //   group.x(closestGridX - 10);
+      //   rect.width(newWidth);
+      //   // 更新任务的持续时间
+      //   task.duration = Math.floor(newWidth / timeUnitWidth);
+
+      // });
+
+      // // 当鼠标进入任务矩形时显示handle
+      // group222.on('mouseenter', () => {
+      //   group.setAttrs({
+      //     visible: true,
+      //     // x : rect.x() + rect.width() - 10
+      //   })
+      //   //  鼠标样式
+      //   this.stage.container().style.cursor = 'ew-resize';
+      // });
+
+      // // 当鼠标离开任务矩形时隐藏handle
+      // group222.on('mouseleave', () => {
+      //   group.visible(false);
+      //   this.stage.container().style.cursor = 'default';
+      // });
+
+      // group222.on('mousedown',(event)=>{
+      //   event.cancelBubble = true;
+      // })
+
+      // group222.add(handle, lineRect, lineRect2)
+      // taskProgressGroup.add(group222);
+      // taskProgressGroup.add(d);
       this.featureLayer.add(taskProgressGroup);
       taskProgressGroup.moveToTop();
+      // group222.moveToTop();
     });
     //  绘制超出提示
     this.drawSurpassTips(surpassMap);
@@ -813,10 +918,10 @@ export class CanvasKonvaCalendar {
     while (true) {
       const { value, done } = values.next();
       if (done) break;
-      const group = this.layer.find(`#${value[0].startTime}`) as Group[];
+      const group = this.layer.find(`#${value[0].startTime}`) as Konva.Group[];
       if (group.length) {
         const groupRect = group[0].getClientRect();
-        const text = new Text({
+        const text = new Konva.Text({
           x: 0,
           y: 5,
           text: `还有${value.length}项`,
@@ -824,7 +929,7 @@ export class CanvasKonvaCalendar {
           fill: 'rgba(0,0,0,0.4)',
         })
 
-        const rect = new Rect({
+        const rect = new Konva.Rect({
           x: -5,
           y: 0,
           height: 18,
@@ -833,7 +938,7 @@ export class CanvasKonvaCalendar {
           cornerRadius: [3, 3, 3, 3]
         })
 
-        const surpassGroup = new Group({
+        const surpassGroup = new Konva.Group({
           name: "surpass-group",
           id: value[0].startTime,
           x: groupRect.x + 10,
@@ -878,7 +983,7 @@ export class CanvasKonvaCalendar {
 
   // 移除所有任务
   private removeTasks(): void {
-    const tasks = this.featureLayer.find(".task-progress-group,.surpass-group") as Group[];
+    const tasks = this.featureLayer.find(".task-progress-group,.surpass-group") as Konva.Group[];
     if (!tasks.length) {
       return;
     }
@@ -962,7 +1067,7 @@ export class CanvasKonvaCalendar {
 
   //  绘制鼠标悬浮的矩形
   private drawHoverGroup(): void {
-    const group = new Group({
+    const group = new Konva.Group({
       visible: false,
       width: this.cellWidth,
       height: this.cellHeight,
@@ -972,7 +1077,7 @@ export class CanvasKonvaCalendar {
       opacity: 0.6
     })
 
-    const rect = new Rect({
+    const rect = new Konva.Rect({
       x: 0,
       y: 0,
       width: this.cellWidth,
@@ -991,7 +1096,13 @@ export class CanvasKonvaCalendar {
     const { plusSignGroup, plusSignRect } = this.drawPlusSign();
     group.add(plusSignGroup, rect)
     this.featureLayer.add(group);
-    // group.moveToBottom();
+    // tooltip
+    const tooltip = new Konva.Label({
+      x: 0,
+      y: 0,
+      // opacity: 0.75,
+      visible: false,
+    });
 
     plusSignRect.on('click tap', (event) => {
       event.cancelBubble = true;
@@ -1000,24 +1111,72 @@ export class CanvasKonvaCalendar {
     plusSignRect.on('mouseover', () => {
       plusSignRect.setAttr('fill', 'rgba(0, 0, 0, 0.1)');
       this.stage.container().style.cursor = 'pointer';
+
+      const rect = this.hoverGroup.getClientRect();
+      tooltip.setAttrs({
+        visible: true,
+        x: rect.x + rect.width - 10,
+        y: rect.y,
+        opacity : 0.75,
+      });
+      tooltip.moveToTop();
+      tooltip.to({
+        opacity : 1,
+      })
     })
     plusSignRect.on('mouseout', () => {
       plusSignRect.setAttr('fill', 'rgba(0, 0, 0, 0)');
       this.stage.container().style.cursor = 'default';
+      tooltip.setAttr('visible', false);
     })
     plusSignGroup.moveToTop();
+    
 
+    tooltip.add(
+      new Konva.Tag({
+        fill: 'black',
+        pointerDirection: 'down',
+        pointerWidth: 5,
+        pointerHeight: 5,
+        lineJoin: 'round',
+        x : 5,
+        y : 5,
+        // shadowColor: 'black',
+        // shadowBlur: 10,
+        // shadowOffsetX: 10,
+        // shadowOffsetY: 10,
+        // shadowOpacity: 0.5,
+        cornerRadius: [2, 2, 2, 2],
+      })
+    );
+
+    tooltip.add(
+      new Konva.Text({
+        text: '添加记录',
+        // fontSize: 12,
+        // padding: 5,
+        // width : 60,
+        // height : 25,
+        fill: 'white',
+        fontSize: 12,
+        verticalAlign: "middle",
+        padding: 10,
+        align: "center",
+      })
+    );
+
+    this.featureLayer.add(tooltip);
   }
 
   //  绘制加号
   private drawPlusSign() {
-    const plusSignGroup = new Group({
+    const plusSignGroup = new Konva.Group({
       id: 'plusSignGroup',
       x: this.hoverGroup.x() + this.cellWidth - 30,
       y: this.hoverGroup.y() + 5,
     });
 
-    const plusSignRect = new Rect({
+    const plusSignRect = new Konva.Rect({
       x: 10,
       y: -5,
       width: 20,
@@ -1026,7 +1185,7 @@ export class CanvasKonvaCalendar {
     });
 
     // 绘制十字架的两条线
-    const verticalLine = new Line({
+    const verticalLine = new Konva.Line({
       points: [
         20,
         0,
@@ -1037,7 +1196,7 @@ export class CanvasKonvaCalendar {
       strokeWidth: 2
     });
 
-    const horizontalLine = new Line({
+    const horizontalLine = new Konva.Line({
       points: [
         15,
         5,
